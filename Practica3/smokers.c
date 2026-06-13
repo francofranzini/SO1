@@ -7,8 +7,8 @@
 sem_t tabaco, papel, fosforos, otra_vez;
 int hay_tabaco 											= 0;
 int hay_papel 											= 0;
-int hay_fosforos                    = 0; 
-pthread_mutex_t lock  							= PTHREAD_MUTEX_INITIALIZER;
+int hay_fosforos                    					= 0; 
+pthread_mutex_t lock  									= PTHREAD_MUTEX_INITIALIZER;
 
 /*
 	a) Veamos un deadlock con el caso = 0:
@@ -23,16 +23,25 @@ pthread_mutex_t lock  							= PTHREAD_MUTEX_INITIALIZER;
 	tabaco -> papel -> fosforos
 	De esta manera, tenemos que, por ejemplo, si liberamos tabaco y papel, queremos que se arme el fumador 1.
 	Veamos uno a uno que pasa con estos recursos.
-	En el caso del tabaco, ningun otro proceso puede tener como primer pedido de recursos al tabaco, ya que habria race-condition en el tabaco y por ende
+	En el caso del tabaco, ningun otro proceso puede tener como primer pedido de recursos al tabaco, ya que habria race-condition en el tabaco, por ende
 	F1: tabaco -> papel
 	F2: fosforos -> tabaco
 	F3: papel -> fosforos
-	El caso de como ordenamos el F3 en el ejemplo anterior, nos deja ver que pongamos como pongamos el sem_wait, tenemos race-condition con los fosforos o el papel
+	En este caso e independientemente de como ordenamos el F3, podemos observar la presencia de race-condition con los fosforos o el papel
 	ya que si 2 fumadores intentan agarrar los fosforos -> race condition
-	y si el papel es el primer recurso pedido por F3, se produce race-condition entre F1 luego del tabaco y F3
+	y si el papel es el primer recurso pedido por F3, se produce race-condition entre F1 luego del tabaco y F3.
 
 	Como el orden dado es generico, vemos que esta situacion se repite para cada uno de los ordenes posibles ==> no es posible ordenarlos para evitar la race-condition
-*/
+
+	c) Implementamos 3 pushers, los cuales en conjunto con las variable hay_papel, hay_tabaco y hay_fosforos trabajan con la siguiente logica
+		- Espero que el agente libere "mi" recurso
+		- Una vez liberado (sem_wait) tomo el lock y me pregunto si puedo hacer fumar a alguien con mi recurso
+		- Si puedo, fuma
+		- Si no puedo porque me falta la tercer componente, indico "hay_[componente]" para que otro pusher pueda usarlo y suelto el lock
+		Como por la presencia del lock podemos asegurar que a lo sumo un pusher a la vez esta verificando si puede hacer fumar a alguien, y en el caso de que
+		este no haga fumar a nadie, el pusher siguiente (pues el agente pone a 2 en funcionamiento) dispone del recurso para hacer fumar a alguien, siempre que
+		el agente disponga 2 recursos, alguien fumará.
+	*/
 
 void agente()
 {
@@ -50,6 +59,7 @@ void fumar(int fumador)
 	printf("Fumador %d: Puf! Puf! Puf!\n", fumador);
 	sleep(1);
 }
+
 void * fumador1(void *arg)  //Tiene FOSFOROS
 {
 	fumar(1);
@@ -62,8 +72,6 @@ void * fumador2(void *arg) //Tiene PAPEL
 	fumar(2);
 	sem_post(&otra_vez);
 	return NULL;
-
-
 }
 
 void * fumador3(void *arg) //Tiene TABACO
@@ -79,7 +87,7 @@ void* pusher_fosforos(void *arg){
 		sem_wait(&fosforos);
 		pthread_mutex_lock(&lock);
 		if(hay_papel){
-		  hay_papel = 0;
+			hay_papel = 0;
 			fumador3((void*)0);
 		}
 		else if(hay_tabaco){
