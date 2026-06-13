@@ -29,10 +29,10 @@ desuscribir(Broadcast) ->
 
 loopBroadcast(RegisteredPids) ->
     receive
-        {suscribir, Pid} -> loopBroadcast([Pid|RegisteredPids]), loopBroadcast(RegisteredPids);
+        {suscribir, Pid} -> loopBroadcast([Pid|RegisteredPids]);
         {desuscribir, Pid} -> loopBroadcast(lists:delete(Pid, RegisteredPids));
         {broadcast, Msg} -> lists:foreach(fun(P) -> P ! {Msg} end, RegisteredPids), loopBroadcast(RegisteredPids);
-        stop -> lists:foreach(fun(P) -> P ! stop end, RegisteredPids)
+        stop -> lists:foreach(fun(P) -> P ! stop end, RegisteredPids), exit(normal)
     end.
 
 loopClient() ->
@@ -55,8 +55,8 @@ test() ->
     broadcast(Server, "Hola a todos"),
     timer:sleep(100),
     broadcast(Server, "Segundo mensaje"),
-    timer:sleep(100).
-    %stop(Server).
+    timer:sleep(100),
+    stop(Server).
 
 
 
