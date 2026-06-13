@@ -8,7 +8,7 @@
 #include <errno.h>
 
 #define BUFF_SIZE 1024
-#define N 500
+#define N 50000
 
 int main()
 {
@@ -74,22 +74,22 @@ int main()
 		sprintf(buffer2, "NUEVO\n", i);
 		cto = strlen(buffer2);
 
-#if 1
-		rc = write(sock[i], buffer2, cto);
-		if (rc < 0) {
-			perror("CLNT: Error escribiendo");
-			return -1;
-		}
-#else
-		/* Escribe de a un byte, tal vez útil para testear el servidor */
-		for (i = 0; i < cto; i++) {
-			rc = write(sock[i], buffer2+i, 1);
-			if (rc < 0) {
-				perror("CLNT: Error escribiendo");
-				return -1;
-			}
-		}
-#endif
+		#if 1
+				rc = write(sock[i], buffer2, cto);
+				if (rc < 0) {
+					perror("CLNT: Error escribiendo");
+					return -1;
+				}
+		#else
+				/* Escribe de a un byte, tal vez útil para testear el servidor */
+				for (i = 0; i < cto; i++) {
+					rc = write(sock[i], buffer2+i, 1);
+					if (rc < 0) {
+						perror("CLNT: Error escribiendo");
+						return -1;
+					}
+				}
+		#endif
 
 		cto = read(sock[i], buffer, sizeof(buffer) - 1);
 		if (cto < 0) {

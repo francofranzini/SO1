@@ -1,6 +1,12 @@
 -module(turnos).
 -export([server/0]).
 
+%%% Al instanciar una VM donde corre erlang se crean
+%%% subprocesos mucho mas ligeros que los hilos en C
+%%% con su propia stack, y la vm maneja el scheduling, garbage collector
+%%% y el heap inicial de cada spawn es pequeño comparado al 
+%%%
+
 server() ->
 	{ok, ListenSocket} = gen_tcp:listen(8000, [{reuseaddr, true}]),
 	wait_connect(ListenSocket, 0).

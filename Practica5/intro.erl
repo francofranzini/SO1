@@ -36,5 +36,5 @@ init () ->
     P4 = {persona, {nombre, "Rolando"}, {apellido, "Garcia"}},
     match_test(),
     tuple_test(P1, P2),
-    string_test(),
+    io:fwrite("~p ~n",[string_test()]),
     Garcias = filtrar_por_apellido2([P4, P3, P2, P1], "Garcia").
