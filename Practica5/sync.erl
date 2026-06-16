@@ -3,15 +3,65 @@
 -export([createSem/1, semP/1, semV/1, destroySem/1]).
 -export([testLock/0, testSem/0]).
 
-createLock () -> throw (undefined).
-lock (_L) -> throw (undefined).
-unlock (_L) -> throw (undefined).
-destroyLock (_L) -> throw (undefined).
+createLock () ->
+	spawn(fun() -> loopLock([]) end).
+loopLock(Pids) ->
+	receive
+		{lock, Pid} ->
+			case Pids of 
+				[] -> Pid ! granted, loopLock([Pid]);
+				_ -> loopLock(Pids ++ [Pid])
+			end;
+		{unlock, Pid} ->
+			case Pids of
+				[] -> loopLock([]);
+				[Pid] -> loopLock([]);
+				[Pid|Rest]-> hd(Rest) ! granted, loopLock(Rest)
+			end;
+		destroy -> exit(normal)
+	end.
 
-createSem (_N) -> throw(undefined).
-destroySem (_S) -> throw (undefined).
-semP (_S) -> throw (undefined).
-semV (_S) -> throw (undefined).
+
+
+
+lock (_L) -> 
+	_L ! {lock, self()},
+	receive
+		granted -> ok
+	end.
+unlock (_L) -> 
+	_L ! {unlock, self()}.
+destroyLock (_L) -> _L ! destroy.
+
+createSem (_N) -> 
+	spawn(fun() -> semLoop(_N, []) end).
+
+semLoop(Cur, Pids) ->
+	receive
+		{wait, Pid} ->
+			if Cur > 0 ->
+					Cur2 = Cur - 1,
+					Pid ! pass, semLoop(Cur2, Pids);
+			else -> 
+					semLoop(Cur, Pids ++ [Pid])
+			end;
+		post -> 
+			case Pids of
+				[] -> Cur2 = Cur + 1, semLoop(Cur2, []);
+				[Pid | Rest] -> Pid ! pass, semLoop(Cur, Rest)
+			end;
+		destroy -> ok
+	end.
+
+
+destroySem (_S) -> _S ! destroy.
+semP (_S) -> 
+	_S ! {wait, self()},
+	receive
+		pass -> ok
+	end.
+semV (_S) -> 
+	_S ! post.
 
 f (L, W) ->
 	lock(L),
